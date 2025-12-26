@@ -28,7 +28,9 @@ fn main() -> std::io::Result<()> {
         let mut packet = Vec::with_capacity(20);
 
         // Session ID (just 10 bytes of zeros for now)
-        packet.extend_from_slice(&[0u8; 10]);
+        let mut session_id = [0u8; 10];
+        session_id[9] = 1;
+        packet.extend_from_slice(&session_id);
 
         // Sequence Number (Critical: Big Endian)
         packet.extend_from_slice(&sequence_num.to_be_bytes());
