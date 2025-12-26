@@ -1,3 +1,4 @@
+use rand::prelude::*;
 use std::net::UdpSocket;
 use std::thread;
 use std::time::Duration;
@@ -17,6 +18,12 @@ fn main() -> std::io::Result<()> {
     loop {
         // --- MOLDUDP64 PACKET STRUCTURE (20 Bytes) ---
         // Session ID (10 bytes) | Sequence (8 bytes) | Count (2 bytes)
+        let choice: f64 = rand::rng().random();
+        let choice = (choice * 10.0) as u16;
+        if choice == 0 {
+            continue;
+        }
+
         let mut packet = Vec::with_capacity(20);
 
         // Session ID (just 10 bytes of zeros for now)
