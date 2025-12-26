@@ -21,6 +21,7 @@ fn main() -> std::io::Result<()> {
         let choice: f64 = rand::rng().random();
         let choice = (choice * 10.0) as u16;
         if choice == 0 {
+            sequence_num += 1;
             continue;
         }
 

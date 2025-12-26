@@ -38,6 +38,8 @@ async fn main() -> io::Result<()> {
 
     let mut buf = [0u8; 1024];
 
+    let mut expected_seq = 1u64;
+
     loop {
         let (len, _) = socket.recv_from(&mut buf).await?;
 
@@ -52,9 +54,15 @@ async fn main() -> io::Result<()> {
         let seq_bytes: [u8; 8] = buf[10..18].try_into().unwrap();
         let seq_num = u64::from_be_bytes(seq_bytes);
 
+        if seq_num > expected_seq {
+            println!("PACKET DROPPED? Skipped a sequence number");
+        } else if seq_num < expected_seq {
+            println!("Early sequence. Packet arrived late, or duplicated.");
+        }
         println!(
             "Received Packet | Size: {} bytes | Sequence: {}",
             len, seq_num
         );
+        expected_seq = seq_num + 1;
     }
 }
