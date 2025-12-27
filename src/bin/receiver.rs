@@ -47,12 +47,14 @@ async fn main() -> io::Result<()> {
     let mut history_buffer = [([0u8; 8], [0u8; 8]); 10];
     let mut i = 0;
     let mut error_counter = 0;
+    let mut out_of_seq: i32 = 0;
+    let mut last_miss: Vec<usize> = Vec::new();
 
     loop {
         let (len, _) = socket.recv_from(&mut buf).await?;
 
         if len < 20 {
-            eprintln!("Packet too small!");
+            println!("Packet too small!");
             continue;
         }
 
@@ -69,13 +71,35 @@ async fn main() -> io::Result<()> {
         history_buffer[i] = (id_bytes, seq_bytes);
         i = (i + 1) % history_buffer.len();
 
+        // Check if we wrapped around and caught up to a missed packet index
+        last_miss.retain(|&missed_index| {
+            if missed_index == i {
+                println!(
+                    "[ERROR] Didn't receive a compensating packet for index {}!",
+                    missed_index
+                );
+                false // Return false to REMOVE this element from the vector
+            } else {
+                true // Return true to KEEP this element
+            }
+        });
+
         if seq_num > expected_seq {
-            println!("PACKET DROPPED? Skipped a sequence number");
+            println!("[LOG] PACKET DROPPED? Skipped a sequence number. No Error Yet");
+            expected_seq = seq_num + 1;
+            out_of_seq += seq_num as i32 - expected_seq as i32;
+            last_miss.push(i);
         } else if seq_num < expected_seq {
-            println!("Early sequence. Packet arrived late, or duplicated.");
+            println!("[LOG] Early sequence. Packet arrived late, or duplicated. No Error Yet");
+            expected_seq = seq_num + 1;
+            // Handle compensation and removal of last miss
+            out_of_seq -= 1;
+            if out_of_seq < 0 {
+                println!("[ERROR] of duplicated packets!");
+            }
         } else {
             println!(
-                "Received Packet | ID: {} | Size: {} bytes | Sequence: {}",
+                "[SUCCESS] Received Packet | ID: {} | Size: {} bytes | Sequence: {}",
                 id_num, len, seq_num
             );
             expected_seq = seq_num + 1;
@@ -84,8 +108,8 @@ async fn main() -> io::Result<()> {
         let f = File::create(format!("error_history{}", error_counter))?;
 
         let mut writer = BufWriter::new(f);
-        for i in 0..10 {
-            writer.write_all(&id_bytes)?;
+        for c in 0..10 {
+            writer.write_all(&history_buffer[(c + i) % 10].0)?;
         }
 
         error_counter += 1;
