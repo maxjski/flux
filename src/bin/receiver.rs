@@ -5,6 +5,13 @@ use std::io::BufWriter;
 use std::io::prelude::*;
 use std::net::{Ipv4Addr, SocketAddr};
 
+struct ErrorEvent {
+    id: u64,
+    seq: u64,
+    expected: u64,
+    history: [([u8; 8], [u8; 8]); 10],
+}
+
 // Helper to set up the "Weird" Multicast Socket
 fn new_multicast_socket(addr: SocketAddr) -> io::Result<std::net::UdpSocket> {
     let socket = Socket::new(Domain::IPV4, Type::DGRAM, Some(Protocol::UDP))?;
